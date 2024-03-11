@@ -1,0 +1,110 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'Coded by: ERIC
+'Project Start Date: 6/16/2011
+
+'Updated 8/12/2014 by Andretti Medina
+'Converted string concatenations into string builds
+'Hook 15954
+'Project 1222 Quote 5345-0
+'Added error handling w/messages.
+'Took out V.local.iColor.declare(Long) variable and hard coded color data into string builds since the color will always be the same.
+
+F.ODBC.Connection!con.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+F.Intrinsic.Control.CallSub(Bdfload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4014_Job_In_Process.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.ODBC.Connection!con.Close
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.BDFLoad.Start
+F.Intrinsic.Control.SetErrorHandler("BDFLoad_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+V.Local.sJob.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.sSeq.Declare(String)
+V.Local.sWriteRow.Declare(String)
+V.Local.sReadRow.Declare(String)
+V.Local.sRR.Declare(String)
+V.Local.sReady.Declare(String)
+V.Local.s9.Declare(String)
+V.Local.iRowCnt.Declare(Long)
+V.Local.i.Declare(Long)
+
+F.Intrinsic.BDF.Load("AUX001","AUX001")
+F.Intrinsic.BDF.Clone("AUX001","Clone")
+F.Intrinsic.BDF.ReadRowCount("AUX001",V.Local.iRowCnt)
+F.Intrinsic.Math.Sub(V.Local.iRowCnt,1,V.Local.iRowCnt)
+
+F.Intrinsic.Control.For(V.Local.i,0,V.Local.iRowCnt,1)
+	F.Intrinsic.BDF.ReadRow("AUX001",V.Local.i,V.Local.sReadRow)
+	F.Intrinsic.String.Split(V.Local.sReadRow,"|~|",V.Local.sRR)
+	F.Intrinsic.String.Split(V.Local.sRR(1),"-",V.Local.sJob)
+	V.Local.sSeq.Set(V.Local.sRR(2).Trim)
+	F.Intrinsic.Control.If(V.Local.sRR.UBound,=,8)
+		V.Local.s9.Set("")
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Concat("|~|",V.Local.sRR(9),V.Local.s9)
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.String.Build("Select * from Jobs_In_Process_G where Job ='{0}' and Suffix = '{1}' and Seq = '{2}'",V.Local.sJob(0),V.Local.sJob(1),V.Local.sSeq,V.Local.sSQL)
+	F.ODBC.Connection!con.OpenRecordsetRO("rst",V.Local.sSQL)
+	F.Intrinsic.Control.If(V.ODBC.con!rst.EOF,=,False)
+		F.Intrinsic.String.Build("{0}]=[BC::65280|~|{1}]=[BC::65280|~|{2}]=[BC::65280|~|{3}]=[BC::65280|~|{4}]=[BC::65280|~|{5}]=[BC::65280|~|{6}]=[BC::65280|~|{7}]=[BC::65280|~|{8}]=[BC::65280{9}",V.local.sRR(0),V.local.sRR(1),V.local.sRR(2),V.local.sRR(3),V.local.sRR(4),V.local.sRR(5),V.local.sRR(6),V.local.sRR(7),V.local.sRR(8),V.local.s9,V.local.sWriteRow)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.Control.If(V.Local.sRR(3),=,"Y")
+			F.Intrinsic.String.Concat(V.Local.sRR(3),"]=[BC::",65280,V.Local.sReady)
+		F.Intrinsic.Control.Else
+			V.Local.sReady.Set(V.Local.sRR(3))
+		F.Intrinsic.Control.EndIf
+		F.Intrinsic.String.Build("{0}|~|{1}|~|{2}|~|{3}|~|{4}|~|{5}|~|{6}|~|{7}|~|{8}{9}",V.local.sRR(0),V.local.sRR(1),V.local.sRR(2),V.local.sReady,V.local.sRR(4),V.local.sRR(5),V.local.sRR(6),V.local.sRR(7),V.local.sRR(8),V.local.s9,V.local.sWriteRow)
+	F.Intrinsic.Control.EndIf
+	F.ODBC.con!rst.Close
+	F.Intrinsic.BDF.WriteRow("Clone",V.Local.sWriteRow.Trim)
+F.Intrinsic.Control.Next(V.Local.i)
+F.Intrinsic.BDF.Save("Clone","AUX001")
+
+F.ODBC.Connection!con.Close
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("BDFLoad_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4014_Job_In_Process.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.ODBC.Connection!con.Close
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.BDFLoad.End
+
+Program.Sub.Comments.Start
+${$0$}$GCG_4014_Job_In_Process$}$AGM$}$5/11/2016
+${$1$}$$}$$}$0$}$15954$}$Post Grid Load Hook$}$5/11/2016 3:15:56 PM$}$(Program: OLG002; Screen: OLS007)
+
+Program.Sub.Comments.End
+
